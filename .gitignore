@@ -1,0 +1,8 @@
+# Ignore emacs auto-save files
+*~
+
+# Ignore elpa package directories
+*elpa*
+
+# Ignore eshell output
+*eshell*
