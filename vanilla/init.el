@@ -9,6 +9,32 @@
 
 (package-initialize)
 
+;;; Appearance ;;;
+
+;; Add line numbers
+(global-display-line-numbers-mode)
+
+;; Configure the solarized theme to make Emacs slicker
+(require 'solarized-theme)
+(load-theme 'solarized-dark t)
+(tool-bar-mode -1)
+
+;; Enable smooth scrolling
+;; Source: https://www.emacswiki.org/emacs/SmoothScrolling
+(setq scroll-step           1
+	scroll-conservatively 10000)
+
+;; Add a file tree extension with NERDTree styling.
+(require 'neotree)
+(setq neo-theme 'nerd)
+(defun my/disable-line-numbers (&optional dummy)
+    (display-line-numbers-mode -1))
+(add-hook 'neo-after-create-hook 'my/disable-line-numbers)
+
+;;; Helm Configuration ;;;
+
+(require 'helm)
+
 ;;; Evil Configurations ;;;
 
 ;; Enable modal editing for Emacs :)
@@ -29,33 +55,21 @@
 (evil-define-key 'normal neotree-mode-map (kbd "A") 'neotree-stretch-toggle)
 (evil-define-key 'normal neotree-mode-map (kbd "H") 'neotree-hidden-file-toggle)
 
-;;; Appearance ;;;
+;; Define mappings for new evil comamnds
+(evil-ex-define-cmd "neotree" 'neotree)
 
-;; Add line numbers
-(global-display-line-numbers-mode)
-
-;; Configure the solarized theme to make Emacs slicker
-(require 'solarized-theme)
-(load-theme 'solarized-dark t)
-(tool-bar-mode -1)
+;; Get rid of search highlighting
+(setq-default evil-ex-search-highlight-all nil)
 
 ;; Remap 'jj' to <esc> in insert mode for superior ergonomics
 (require 'evil-escape)
 (evil-escape-mode)
 (setq-default evil-escape-key-sequence "jj")
 (setq-default evil-escape-delay 0.2)
-
-;; Enable smooth scrolling
-;; Source: https://www.emacswiki.org/emacs/SmoothScrolling
-(setq scroll-step           1
-	scroll-conservatively 10000)
-
-;; Add a file tree extension with NERDTree styling.
-(require 'neotree)
-(setq neo-theme 'nerd)
-(defun my/disable-line-numbers (&optional dummy)
-    (display-line-numbers-mode -1))
-(add-hook 'neo-after-create-hook 'my/disable-line-numbers)
+;; NOTE(jalextowle): The best way to exit visual mode is to
+;; use the command that entered it. It's really annoying to
+;; exit with "jj", so I disable it for the visual mode.
+(add-to-list 'evil-escape-excluded-major-modes 'visual)
 
 ;;; Typescript ;;;
 
@@ -83,9 +97,35 @@
 (setq company-tooltip-align-annotations t)
 
 ;; formats the buffer before saving
+(add-hook 'typescript-mode-hook #'setup-tide-mode)
+
+;;; Before Save Hooks ;;;
+
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
 (add-hook 'before-save-hook 'tide-format-before-save)
 
-(add-hook 'typescript-mode-hook #'setup-tide-mode)
+;;; Startup Screen ;;;
+
+;; Open NeoTree on entry.
+(neotree)
+
+;; Enter into fullscreen on open.
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+(defun display-startup-echo-area-message ()
+  (message "Let the hacking begin!"))
+
+;;; Fix Annoyances ;;;
+
+(defun acg-initial-buffer-choice ()
+  (if (get-buffer "*scratch*")
+      (kill-buffer "*scratch*"))
+  (get-buffer "*Messages*"))
+
+(setq initial-buffer-choice 'acg-initial-buffer-choice)
+
+;; No more typing the whole yes or no. Just y or n will do.
+(fset 'yes-or-no-p 'y-or-n-p)
 
 ;;; Custom (do not edit) ;;;
 
@@ -96,7 +136,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (key-chord neotree company evil-escape solarized-theme evil))))
+    (helm key-chord neotree company evil-escape solarized-theme evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
