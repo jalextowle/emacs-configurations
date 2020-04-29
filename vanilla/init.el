@@ -9,14 +9,46 @@
 
 (package-initialize)
 
+;;; Emacs Remappings ;;;
+
+;; Remap two bindings to avoid using M-x
+(global-set-key "\C-x\C-m" 'execute-extended-command)
+(global-set-key "\C-c\C-m" 'execute-extended-command)
+
 ;;; Appearance ;;;
 
 ;; Add line numbers
+(require 'display-line-numbers)
+
+(defcustom display-line-numbers-exempt-modes '(vterm-mode eshell-mode shell-mode term-mode ansi-term-mode neotree-mode)
+  "Major modes on which to disable the linum mode, exempts them from global requirement"
+  :group 'display-line-numbers
+  :type 'list
+  :version "green")
+
+(defun display-line-numbers--turn-on ()
+  "turn on line numbers but excempting certain majore modes defined in `display-line-numbers-exempt-modes'"
+  (if (and
+       (not (member major-mode display-line-numbers-exempt-modes))
+       (not (minibufferp)))
+      (display-line-numbers-mode)))
+
 (global-display-line-numbers-mode)
 
-;; Configure the solarized theme to make Emacs slicker
-(require 'solarized-theme)
-(load-theme 'solarized-dark t)
+;; turn on highlight matching brackets when cursor is on one
+(show-paren-mode 1)
+
+;;; Themes ;;;
+
+;; TODO(jalextowle): I really love this theme, but it's highlighting is
+;; too low contrast for evil-visual-state. It's comments are also very
+;; low contract. Fix this and switch back to it.
+;;
+;; (require 'underwater-theme)
+;; (load-theme 'underwater t)
+
+(require 'zenburn-theme)
+(load-theme 'zenburn)
 (tool-bar-mode -1)
 
 ;; Enable smooth scrolling
@@ -24,16 +56,13 @@
 (setq scroll-step           1
 	scroll-conservatively 10000)
 
-;; Add a file tree extension with NERDTree styling.
-(require 'neotree)
-(setq neo-theme 'nerd)
-(defun my/disable-line-numbers (&optional dummy)
-    (display-line-numbers-mode -1))
-(add-hook 'neo-after-create-hook 'my/disable-line-numbers)
-
 ;;; Helm Configuration ;;;
 
 (require 'helm)
+(global-set-key (kbd "M-x") #'helm-M-x)
+(global-set-key (kbd "C-x r b") #'helm-filtered-bookmarks)
+(global-set-key (kbd "C-x C-f") #'helm-find-files)
+(helm-mode 1)
 
 ;;; Evil Configurations ;;;
 
@@ -41,35 +70,84 @@
 (require 'evil)
 (evil-mode 1)
 
+;; Remap <esc> to jj
+(require 'key-chord)
+(setq key-chord-two-keys-delay 0.5)
+(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
+(key-chord-mode 1)
+
 ;; Make search more similar to normal vim search.
 (evil-select-search-module 'evil-search-module 'evil-search)
-
-;; Remap some evil keys for neotree
-(evil-define-key 'normal neotree-mode-map (kbd "TAB") 'neotree-enter)
-(evil-define-key 'normal neotree-mode-map (kbd "SPC") 'neotree-quick-look)
-(evil-define-key 'normal neotree-mode-map (kbd "q") 'neotree-hide)
-(evil-define-key 'normal neotree-mode-map (kbd "RET") 'neotree-enter)
-(evil-define-key 'normal neotree-mode-map (kbd "g") 'neotree-refresh)
-(evil-define-key 'normal neotree-mode-map (kbd "n") 'neotree-next-line)
-(evil-define-key 'normal neotree-mode-map (kbd "p") 'neotree-previous-line)
-(evil-define-key 'normal neotree-mode-map (kbd "A") 'neotree-stretch-toggle)
-(evil-define-key 'normal neotree-mode-map (kbd "H") 'neotree-hidden-file-toggle)
-
-;; Define mappings for new evil comamnds
-(evil-ex-define-cmd "neotree" 'neotree)
 
 ;; Get rid of search highlighting
 (setq-default evil-ex-search-highlight-all nil)
 
-;; Remap 'jj' to <esc> in insert mode for superior ergonomics
-(require 'evil-escape)
-(evil-escape-mode)
-(setq-default evil-escape-key-sequence "jj")
-(setq-default evil-escape-delay 0.2)
-;; NOTE(jalextowle): The best way to exit visual mode is to
-;; use the command that entered it. It's really annoying to
-;; exit with "jj", so I disable it for the visual mode.
-(add-to-list 'evil-escape-excluded-major-modes 'visual)
+;;; Before Save Hooks ;;;
+
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+(add-hook 'before-save-hook 'tide-format-before-save)
+
+;;; Org-Mode ;;;
+
+;; Disable the splash screen (to enable it agin, replace the t with 0)
+(setq inhibit-splash-screen t)
+
+;; Enable transient mark mode
+(transient-mark-mode 1)
+
+;;;;Org mode configuration
+;; Enable Org mode
+(require 'org)
+;; Make Org mode work with files ending in .org
+;; (add-to-list 'auto-mode-alist '("\\.org$" . org-mode))
+;; The above is the default in recent emacsen
+
+;;; Org Roam ;;;
+
+(require 'org-roam)
+(org-roam-mode +1)
+
+;;; Startup Screen ;;;
+
+;; Enter into fullscreen on open.
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+(defun display-startup-echo-area-message ()
+  (message "Let the hacking begin!"))
+
+;;; Fix Annoyances ;;;
+
+(defun acg-initial-buffer-choice ()
+  (if (get-buffer "*scratch*")
+      (kill-buffer "*scratch*"))
+  (get-buffer "*Messages*"))
+
+(setq initial-buffer-choice 'acg-initial-buffer-choice)
+
+;; No more typing the whole yes or no. Just y or n will do.
+(fset 'yes-or-no-p 'y-or-n-p)
+
+;;; Company Mode ;;;
+
+;; Reduce the startup time of company autocomplete mode.
+(setq company-idle-delay 0.1)
+(setq company-minimum-prefix-length 1)
+
+;; Map tab to autocomplete or cycle
+(eval-after-load 'company
+  '(progn
+     (define-key company-active-map (kbd "TAB") 'company-complete-common-or-cycle)
+     (define-key company-active-map (kbd "<tab>") 'company-complete-common-or-cycle)))
+
+;; Map tab to autocomplete or cycle
+(eval-after-load 'company
+  '(progn
+     (define-key company-active-map (kbd "S-TAB") 'company-select-previous)
+     (define-key company-active-map (kbd "<backtab>") 'company-select-previous)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;       Language Modes       ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Typescript ;;;
 
@@ -90,53 +168,34 @@
   (kbd "C-]") 'tide-jump-to-definition
   (kbd "C-t") 'tide-jump-back)
 
-;; Start autocomplete after only typing a single character
-(setq company-minimum-prefix-length 1)
-
 ;; aligns annotation to the right hand side
 (setq company-tooltip-align-annotations t)
 
-;; formats the buffer before saving
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
-;;; Before Save Hooks ;;;
+;;; Yaml ;;;
 
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
-(add-hook 'before-save-hook 'tide-format-before-save)
+(require 'yaml-mode)
+(add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-mode))
+(add-hook 'yaml-mode-hook
+ '(lambda ()
+    (define-key yaml-mode-map "\C-m" 'newline-and-indent)))
 
-;;; Startup Screen ;;;
-
-;; Open NeoTree on entry.
-(neotree)
-
-;; Enter into fullscreen on open.
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
-
-(defun display-startup-echo-area-message ()
-  (message "Let the hacking begin!"))
-
-;;; Fix Annoyances ;;;
-
-(defun acg-initial-buffer-choice ()
-  (if (get-buffer "*scratch*")
-      (kill-buffer "*scratch*"))
-  (get-buffer "*Messages*"))
-
-(setq initial-buffer-choice 'acg-initial-buffer-choice)
-
-;; No more typing the whole yes or no. Just y or n will do.
-(fset 'yes-or-no-p 'y-or-n-p)
-
-;;; Custom (do not edit) ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;       Custom (DO NOT EDIT!)      ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   (quote
+    ("76c5b2592c62f6b48923c00f97f74bcb7ddb741618283bdb2be35f3c0e1030e3" default)))
  '(package-selected-packages
    (quote
-    (helm key-chord neotree company evil-escape solarized-theme evil))))
+    (zenburn-theme underwater-theme yaml-mode org-roam helm key-chord neotree company evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

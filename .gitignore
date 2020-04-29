@@ -4,5 +4,6 @@
 # Ignore elpa package directories
 *elpa*
 
-# Ignore eshell output
-*eshell*
+# Ignore eshell contents with the exception of aliases
+*eshell/history
+*eshell/lastdir
