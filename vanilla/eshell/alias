@@ -1,8 +1,9 @@
-alias open find-file $1
-alias vim echo "You aren't in a terminal emulator anymore!"
-alias yt yarn test
-alias yb yarn build
-alias y yarn
-alias yl yarn lint
-alias yall ybt && yl
+alias gs git status
 alias ybt yarn build && yarn test
+alias yall ybt && yl
+alias yl yarn lint
+alias y yarn
+alias yb yarn build
+alias yt yarn test
+alias vim echo "You aren't in a terminal emulator anymore!"
+alias open find-file $1

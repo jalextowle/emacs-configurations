@@ -7,3 +7,6 @@
 # Ignore eshell contents with the exception of aliases
 *eshell/history
 *eshell/lastdir
+
+# Ignore transient files
+*transient

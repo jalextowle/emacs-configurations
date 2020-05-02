@@ -9,13 +9,11 @@
 
 (package-initialize)
 
-;;; Emacs Remappings ;;;
-
-;; Remap two bindings to avoid using M-x
-(global-set-key "\C-x\C-m" 'execute-extended-command)
-(global-set-key "\C-c\C-m" 'execute-extended-command)
-
 ;;; Appearance ;;;
+
+(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 
 ;; Add line numbers
 (require 'display-line-numbers)
@@ -48,8 +46,7 @@
 ;; (load-theme 'underwater t)
 
 (require 'zenburn-theme)
-(load-theme 'zenburn)
-(tool-bar-mode -1)
+(load-theme 'zenburn t)
 
 ;; Enable smooth scrolling
 ;; Source: https://www.emacswiki.org/emacs/SmoothScrolling
@@ -64,17 +61,35 @@
 (global-set-key (kbd "C-x C-f") #'helm-find-files)
 (helm-mode 1)
 
+;;; Emacs Remappings ;;;
+
+;; Remap two bindings to avoid using M-x
+(global-set-key (kbd "C-x C-m") #'helm-M-x)
+(global-set-key (kbd "C-c C-m") #'helm-M-x)
+
+;; Map find-file to avoid fat fingering
+(global-set-key (kbd "C-c C-f") #'helm-find-files)
+
 ;;; Evil Configurations ;;;
 
 ;; Enable modal editing for Emacs :)
 (require 'evil)
 (evil-mode 1)
 
-;; Remap <esc> to jj
+;; Add increment and decrement using `evil-number`
+(require 'evil-numbers)
+(define-key evil-normal-state-map (kbd "C-c +") 'evil-numbers/inc-at-pt)
+(define-key evil-normal-state-map (kbd "C-c -") 'evil-numbers/dec-at-pt)
+
 (require 'key-chord)
 (setq key-chord-two-keys-delay 0.5)
-(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
 (key-chord-mode 1)
+
+;; Remap <esc> to jj
+(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
+
+;; Add an easy alias for getting back to eshell.
+(key-chord-define evil-normal-state-map ";e" 'eshell)
 
 ;; Make search more similar to normal vim search.
 (evil-select-search-module 'evil-search-module 'evil-search)
@@ -85,7 +100,6 @@
 ;;; Before Save Hooks ;;;
 
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
-(add-hook 'before-save-hook 'tide-format-before-save)
 
 ;;; Org-Mode ;;;
 
@@ -126,6 +140,14 @@
 
 ;; No more typing the whole yes or no. Just y or n will do.
 (fset 'yes-or-no-p 'y-or-n-p)
+
+;;; Magit ;;;
+
+(require 'magit)
+(magit-mode)
+
+;; Enable vim keybindings in Magit
+(require 'evil-magit)
 
 ;;; Company Mode ;;;
 
@@ -168,10 +190,34 @@
   (kbd "C-]") 'tide-jump-to-definition
   (kbd "C-t") 'tide-jump-back)
 
+
 ;; aligns annotation to the right hand side
 (setq company-tooltip-align-annotations t)
 
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
+
+;; Add prettier support for tide
+(require 'add-node-modules-path)
+(require 'prettier-js)
+(add-hook 'typescript-mode-hook 'add-node-modules-path)
+;;; NOTE(jalextowle): This is a clever way of making this hook
+;;; local to `typescript-mode`.
+;;; Source: https://stackoverflow.com/questions/1931784/emacs-is-before-save-hook-a-local-variable
+(add-hook
+ 'typescript-mode-hook
+ (lambda ()
+   (add-hook
+    'before-save-hook
+    (lambda ()
+      (save-excursion
+	(prettier-js)
+	(tide-display-errors)))
+    nil t)))
+
+(evil-define-key 'normal tide-mode-map (kbd ";r") 'tide-project-errors)
+
+;; Allows for jumping to error in tide-project-errors-mode while still using evil-mode
+(evil-define-key 'normal tide-project-errors-mode-map (kbd "RET") 'tide-goto-error)
 
 ;;; Yaml ;;;
 
@@ -193,9 +239,10 @@
  '(custom-safe-themes
    (quote
     ("76c5b2592c62f6b48923c00f97f74bcb7ddb741618283bdb2be35f3c0e1030e3" default)))
+ '(helm-completion-style (quote emacs))
  '(package-selected-packages
    (quote
-    (zenburn-theme underwater-theme yaml-mode org-roam helm key-chord neotree company evil))))
+    (evil-magit magit add-node-modules-path prettier-js evil-numbers zenburn-theme underwater-theme yaml-mode org-roam helm key-chord neotree company evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
