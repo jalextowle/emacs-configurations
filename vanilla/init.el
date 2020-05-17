@@ -97,6 +97,12 @@
 ;; Get rid of search highlighting
 (setq-default evil-ex-search-highlight-all nil)
 
+;;; DeadGrep ;;;
+
+(require 'deadgrep)
+(evil-define-key 'normal fundamental-mode-map (kbd ";d") #'deadgrep)
+(evil-define-key 'normal deadgrep-mode-map (kbd "RET") 'deadgrep-visit-result-other-window)
+
 ;;; Before Save Hooks ;;;
 
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
@@ -119,6 +125,8 @@
 ;;; Org Roam ;;;
 
 (require 'org-roam)
+(setq org-roam-directory "~/roam-notes/")
+(setq org-roam-completion-system 'helm)
 (org-roam-mode +1)
 
 ;;; Startup Screen ;;;
@@ -227,6 +235,28 @@
  '(lambda ()
     (define-key yaml-mode-map "\C-m" 'newline-and-indent)))
 
+
+;;; Golang Configurations ;;;
+
+(require 'go-mode)
+(defun setup-go-mode-hook ()
+  (go-eldoc-setup))
+
+(evil-define-key 'normal go-mode-map
+    (kbd "C-]") 'godef-jump
+    (kbd "C-t") 'pop-tag-mark)
+
+(add-hook 'go-mode-hook 'setup-go-mode-hook)
+(add-hook 'go-mode-hook
+ (lambda ()
+   (add-hook
+    'before-save-hook
+    (lambda ()
+      (save-excursion
+	(add-hook 'before-save-hook 'gofmt-before-save)
+	(setq indent-tabs-mode 1)))
+    nil t)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;       Custom (DO NOT EDIT!)      ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -242,7 +272,7 @@
  '(helm-completion-style (quote emacs))
  '(package-selected-packages
    (quote
-    (evil-magit magit add-node-modules-path prettier-js evil-numbers zenburn-theme underwater-theme yaml-mode org-roam helm key-chord neotree company evil))))
+    (deadgrep evil-magit magit add-node-modules-path prettier-js evil-numbers zenburn-theme underwater-theme yaml-mode org-roam helm key-chord neotree company evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
